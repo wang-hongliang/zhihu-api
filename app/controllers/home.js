@@ -5,7 +5,6 @@ class HomeCtl {
   }
   upload(ctx){
     const file = ctx.request.files.file
-    console.log(file)
     const basename = path.basename(file.filepath)
     ctx.body = {
       url: `${ctx.origin}/uploads/${basename}`

@@ -8,36 +8,42 @@ const {
 const userSchema = new Schema({
   __v: {
     type: Number,
-    select: false
+    select: false // 是否返回
   },
   name: {
     type: String,
-    require: true
+    require: true,
+    select: true
   },
   password: {
     type: String,
     require: true,
-    select: true // 是否返回
+    select: false
   },
   avatar_url: {
-    type: String
+    type: String,
+    select: true
   },
   gender: {
     type: String,
     enum: ['male', 'female'],
     default: 'male',
-    require: true
+    require: true,
+    select: true
   },
   headline: {
-    type: String
+    type: String,
+    select: true
   },
   locations: {
     type: [{
-      type: String
+      type: String,
+      select: true
     }]
   },
   bussiness: {
-    type: String
+    type: String,
+    select: true
   },
   employments: {
     type: [{
@@ -47,7 +53,8 @@ const userSchema = new Schema({
       job: {
         type: String
       }
-    }]
+    }],
+    select: true
   },
   educations: {
     type: [{
@@ -67,7 +74,15 @@ const userSchema = new Schema({
       graduation_year: {
         type: Number
       }
-    }]
+    }],
+    select: true
+  },
+  following: {
+    type: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    select: true
   }
 })
 

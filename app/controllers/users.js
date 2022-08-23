@@ -1,16 +1,43 @@
 const jsonwebtoken = require("jsonwebtoken")
 const User = require("../models/users")
-const { secret } = require('../config')
+const Question = require("../models/questions")
+const {
+  secret
+} = require('../config')
 
 class UsersCtl {
   async find(ctx) {
-    ctx.body = await User.find()
+    const {
+      per_page = 10
+    } = ctx.query
+    const page = Math.max(ctx.query.page * 1, 1) - 1
+    const perPage = Math.max(per_page * 1, 1)
+    ctx.body = await UsersCtl
+      .find({
+        name: new RegExp(ctx.query.q)
+      })
+      .limit(perPage)
+      .skip(page * perPage)
   }
 
   async findById(ctx) {
-    const { fields } = ctx.query
-    const selectFields = fields.split(';').filter(f=>f).map(f=>' +' + f).join('')
-    const user = await User.findById(ctx.params.id).select(selectFields)
+    const {
+      fields = ""
+    } = ctx.query
+    const selectFields = fields.split(';').filter(f => f).map(f => ' +' + f).join('')
+    const populateStr = fields.split(';').filter(f => f).map(f => {
+      if(f === "employments") {
+        return 'employments.compang employments.job'
+      }
+      if(f === "educations"){
+        return 'educations.school educations.major'
+      }
+      return f
+    }).join(' ')
+    const user = await User
+      .findById(ctx.params.id)
+      .select(selectFields)
+      .populate(populateStr)
     if (!user) {
       ctx.throw(404, '用户不存在')
     }
@@ -18,7 +45,6 @@ class UsersCtl {
   }
 
   async create(ctx) {
-    // koa-parameter 校验
     ctx.verifyParams({
       name: {
         type: "string",
@@ -29,16 +55,22 @@ class UsersCtl {
         required: true
       },
     })
-    const { name } = ctx.request.body
-    const repeatedUser = await User.findOne({name})
-    if(repeatedUser) { ctx.throw(409,'用户已经占用') }
+    const {
+      name
+    } = ctx.request.body
+    const repeatedUser = await User.findOne({
+      name
+    })
+    if (repeatedUser) {
+      ctx.throw(409, '用户已经占用')
+    }
     const user = await new User(ctx.request.body).save()
     ctx.body = user
   }
 
-  async checkOwner(ctx,next) {
-    if(ctx.params.id !== ctx.state.user._id){
-      ctx.throw(403,"没有权限")
+  async checkOwner(ctx, next) {
+    if (ctx.params.id !== ctx.state.user._id) {
+      ctx.throw(403, "没有权限")
     }
     await next()
   }
@@ -67,7 +99,7 @@ class UsersCtl {
       },
       locations: {
         type: "array",
-        itemType:'string',
+        itemType: 'string',
         required: false
       },
       bussiness: {
@@ -76,23 +108,27 @@ class UsersCtl {
       },
       employments: {
         type: "array",
-        itemType:'object',
+        itemType: 'object',
         required: false
       },
       educations: {
         type: "array",
-        itemType:'object',
+        itemType: 'object',
         required: false
       },
     })
-    const user = await User.findByIdAndUpdate(ctx.params.id,ctx.request.body)
-    if(!user){ctx.throw(404, '用户不存在')}
+    const user = await User.findByIdAndUpdate(ctx.params.id, ctx.request.body)
+    if (!user) {
+      ctx.throw(404, '用户不存在')
+    }
     ctx.body = user
   }
 
   async delete(ctx) {
     const user = await User.findByIdAndRemove(ctx.params.id)
-    if(!user){ctx.throw(404, '用户不存在')}
+    if (!user) {
+      ctx.throw(404, '用户不存在')
+    }
     ctx.status = 204
   }
 
@@ -108,48 +144,98 @@ class UsersCtl {
       },
     })
     const user = await User.findOne(ctx.request.body)
-    if(!user) {ctx.throw(401,'用户名或密码不正确')} 
-    const { _id,name } = user
+    if (!user) {
+      ctx.throw(401, '用户名或密码不正确')
+    }
+    const {
+      _id,
+      name
+    } = user
     const token = jsonwebtoken.sign({
-      _id,name
-    },secret,{expiresIn:'1d'})
-    ctx.body = {token}
+      _id,
+      name
+    }, secret, {
+      expiresIn: '1d'
+    })
+    ctx.body = {
+      token
+    }
   }
 
   async listFollowing(ctx) {
     const user = await User.findById(ctx.params.id).select("+following").populate('following')
-    if(!user){ctx.throw(404)}
+    if (!user) {
+      ctx.throw(404)
+    }
     ctx.body = user.following
   }
 
   async listFollowers(ctx) {
-    const user = await User.find({following:ctx.params.id})
+    const user = await User.find({
+      following: ctx.params.id
+    })
     ctx.body = user
   }
 
-  async checkUserExist(ctx,next) {
+  async checkUserExist(ctx, next) {
     const user = await User.findById(ctx.params.id)
-    if(!user){ctx.throw(404),'用户不存在'}
+    if (!user) {
+      ctx.throw(404), '用户不存在'
+    }
     await next()
   }
 
   async follow(ctx) {
     const me = await User.findById(ctx.state.user._id).select("+following")
-    if(!me.following.map(id=>id.toString()).includes(ctx.params.id)){
+    if (!me.following.map(id => id.toString()).includes(ctx.params.id)) {
       me.following.push(ctx.params.id)
       me.save()
     }
     ctx.status = 204
   }
-  
+
   async unfollow(ctx) {
     const me = await User.findById(ctx.state.user._id).select("+following")
-    const index = me.following.map(id=>id.toString()).indexOf(ctx.params.id)
-    if(index> -1){
-      me.following.splice(index,1)
+    const index = me.following.map(id => id.toString()).indexOf(ctx.params.id)
+    if (index > -1) {
+      me.following.splice(index, 1)
       me.save()
     }
     ctx.status = 204
+  }
+
+  async listFollowingTopics(ctx) {
+    const user = await User.find({
+      following: ctx.params.id
+    }).select("+followingTopics")
+    if (!user) {
+      ctx.throw(404), '用户不存在'
+    }
+    ctx.body = user.followingTopics
+  }
+
+  async followTopic(ctx) {
+    const me = await User.findById(ctx.state.user._id).select("+followingTopics")
+    if (!me.followingTopics.map(id => id.toString()).includes(ctx.params.id)) {
+      me.followingTopics.push(ctx.params.id)
+      me.save()
+    }
+    ctx.status = 204
+  }
+
+  async unfollowTopic(ctx) {
+    const me = await User.findById(ctx.state.user._id).select("+followingTopics")
+    const index = me.followingTopics.map(id => id.toString()).indexOf(ctx.params.id)
+    if (index > -1) {
+      me.followingTopics.splice(index, 1)
+      me.save()
+    }
+    ctx.status = 204
+  }
+
+  async listQuestions(ctx){
+    const questions = await Question.find({questioner:ctx.params.id})
+    ctx.body = questions
   }
 }
 

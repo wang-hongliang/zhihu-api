@@ -98,7 +98,28 @@ const userSchema = new Schema({
       ref: 'Topic'
     }],
     select: true
-  }
-})
+  },
+  likingAnswers: {
+    type: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Answer'
+    }],
+    select: true
+  },
+  dislikingAnswers: {
+    type: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Answer'
+    }],
+    select: true
+  },
+  collectingAnswers: {
+    type: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Answer'
+    }],
+    select: true
+  },
+},{timestamps:true})
 
 module.exports = model('User', userSchema)

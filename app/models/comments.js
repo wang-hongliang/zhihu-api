@@ -5,7 +5,7 @@ const {
   model
 } = mongoose
 
-const answerSchema = new Schema({
+const commentSchema = new Schema({
   __v: {
     type: Number,
     select: false // 是否返回
@@ -14,7 +14,7 @@ const answerSchema = new Schema({
     type: String,
     require: true,
   },
-  answerer: {
+  commentator: {
     type: Schema.Types.ObjectId,
     ref:"User",
     require:true,
@@ -24,11 +24,17 @@ const answerSchema = new Schema({
     type:String,
     require:true
   },
-  voteCount:{
-    type:Number,
+  answerId:{
+    type:String,
     require:true,
-    default: 0
+  },
+  rootCommentId:{
+    type:String,
+  },
+  replyTo:{
+    type: Schema.Types.ObjectId,
+    ref:"User",
   }
 },{timestamps:true})
 
-module.exports = model('Answer', answerSchema)
+module.exports = model('Comment', commentSchema)

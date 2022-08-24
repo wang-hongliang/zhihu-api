@@ -23,6 +23,6 @@ const topicSchema = new Schema({
     type: String,
     select: true
   },
-})
+},{timestamps:true})
 
 module.exports = model('Topic', topicSchema)
